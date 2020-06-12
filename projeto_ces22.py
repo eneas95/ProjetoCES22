@@ -4,13 +4,13 @@ Projeto: Ces-22
 import arcade
 
 # Constants used to scale the window.
-SCREEN_WIDTH  = 1000
-SCREEN_HEIGHT = 550
+SCREEN_WIDTH  = 1600
+SCREEN_HEIGHT = 1200
 SCREEN_TITLE  = "Platformer"
 
 
 # Constants used to scale our sprites from their original size
-CHARACTER_SCALING = 1
+CHARACTER_SCALING = 0.5
 TILE_SCALING      = 0.5
 COIN_SCALING      = 0.5
 
@@ -22,10 +22,8 @@ PLAYER_JUMP_SPEED       = 15
 
 # How many pixels to keep as a minimum margin between the character
 # and the edge of the screen.
-LEFT_VIEWPORT_MARGIN   = 0
-RIGHT_VIEWPORT_MARGIN  = 750
-BOTTOM_VIEWPORT_MARGIN = 0
-TOP_VIEWPORT_MARGIN    = 0
+RIGHT_VIEWPORT_MARGIN  = 1536
+RIGHT_END              = 3200
 
 
 class MyGame(arcade.Window):
@@ -36,7 +34,7 @@ class MyGame(arcade.Window):
     def __init__(self):
 
         # Call the parent class (arcade.window) and set up the window
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, fullscreen = True)
 
         # These are 'lists' that keep track of our sprites. Each sprite should
         # go into a list.
@@ -79,17 +77,22 @@ class MyGame(arcade.Window):
         # Set up the player, specifically placing it at these coordinates.
         self.player_sprite          = arcade.Sprite("images/player_1/player_stand.png", CHARACTER_SCALING)
         self.player_sprite.center_x = 64
-        self.player_sprite.center_y = 96
+        self.player_sprite.center_y = 1000
         self.player_sprite.change_x = SCENARIO_MOVEMENT_SPEED
         self.player_list.append(self.player_sprite)
 
         # Create the ground
         # This shows using a loop to place multiple sprites horizontally
-        for x in range(0, 5250, 64):
+        for x in range(0, 10000, 64):
             wall          = arcade.Sprite("images/tiles/grassMid.png", TILE_SCALING)
+            ceil          = arcade.Sprite("images/tiles/grassMid.png", TILE_SCALING)
+            ceil.center_x = x
+            ceil.center_y = 1168 
             wall.center_x = x
             wall.center_y = 32
             self.wall_list.append(wall)
+            self.wall_list.append(ceil)
+
 
         # Put some crates on the ground
         # This shows using a coordinate list to place sprites
@@ -110,7 +113,6 @@ class MyGame(arcade.Window):
 
     def on_draw(self):
         """ Render the screen. """
-
         # Clear the screen to the background color. It is required to be called
         # before drawing anything to the screen.
         arcade.start_render()
@@ -122,6 +124,10 @@ class MyGame(arcade.Window):
 
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
+
+        if key == arcade.key.F:
+            self.set_fullscreen(not self.fullscreen)
+            self.set_viewport(0, SCREEN_WIDTH, 0, SCREEN_HEIGHT)
 
         if key == arcade.key.UP or key == arcade.key.W:
             self.player_sprite.change_y  = PLAYER_JUMP_SPEED
@@ -144,12 +150,6 @@ class MyGame(arcade.Window):
         # Track if we need to change the viewport
 
         changed = False
-
-        # Scroll left
-        left_boundary = self.view_left + LEFT_VIEWPORT_MARGIN
-        if self.player_sprite.left < left_boundary:
-            self.view_left -= left_boundary - self.player_sprite.left
-            changed = True
 
         # Scroll right
         right_boundary = self.view_left + SCREEN_WIDTH - RIGHT_VIEWPORT_MARGIN
