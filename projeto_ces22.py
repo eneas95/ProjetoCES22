@@ -3,22 +3,24 @@ Projeto: Ces-22
 """
 import arcade, random
 
+
 # Global variables used to create the next obstacle.
 OBSTACLE_DISTANCE        = 640
 LAST_POSITION            = 0
-
+LEVEL                    = 0
 
 # Constants used to scale the window.
-SCREEN_WIDTH  = 1600
-SCREEN_HEIGHT = 1408
+SCREEN_WIDTH  = 2000
+SCREEN_HEIGHT = 1500
 SCREEN_TITLE  = "Platformer"
 
 
 # Constants used to scale our sprites from their original size
-CHARACTER_SCALING = 0.5
-TILE_SCALING      = 0.5
+CHARACTER_SCALING = 1
+TILE_SCALING      = 1
 COIN_SCALING      = 0.5
 TILE_SIZE         = 64
+HOLE_Y            = SCREEN_HEIGHT - 4*TILE_SIZE
 # Movement speed of player, in pixels per frame
 PLAYER_MOVEMENT_SPEED   = 10
 SCENARIO_MOVEMENT_SPEED = 10
@@ -27,7 +29,7 @@ PLAYER_JUMP_SPEED       = 30
 
 # How many pixels to keep as a minimum margin between the character
 # and the edge of the screen.
-RIGHT_VIEWPORT_MARGIN  = 1536
+RIGHT_VIEWPORT_MARGIN  = 1500
 
 
 class MyGame(arcade.Window):
@@ -39,6 +41,8 @@ class MyGame(arcade.Window):
 
         # Call the parent class (arcade.window) and set up the window
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, fullscreen = True)
+
+
 
         # These are 'lists' that keep track of our sprites. Each sprite should
         # go into a list.
@@ -79,15 +83,14 @@ class MyGame(arcade.Window):
         self.coin_list   = arcade.SpriteList(use_spatial_hash=True)
 
         # Set up the player, specifically placing it at these coordinates.
-        self.player_sprite          = arcade.Sprite("images/player_1/player_stand.png", CHARACTER_SCALING)
+        self.player_sprite          = arcade.Sprite("images/player_1/slimeBlue.png", CHARACTER_SCALING)
         self.player_sprite.center_x = 64
-        self.player_sprite.center_y = 1000
+        self.player_sprite.center_y = 1500
         self.player_sprite.change_x = SCENARIO_MOVEMENT_SPEED
         self.player_list.append(self.player_sprite)
 
         #Initiate last position.
         LAST_POSITION = self.player_sprite.right
-
         # Create the 'physics engine'
         self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite,
                                                              self.wall_list,
@@ -169,6 +172,7 @@ class MyGame(arcade.Window):
 
     def create_obstacle(self, distance):
         ''' Create the next obstacle with a hole.'''
+        '''
         HOLE = random.randint(1, 20)
         height = TILE_SIZE/2
         for n in range(0, 22):
@@ -180,7 +184,20 @@ class MyGame(arcade.Window):
             wall.position = (LAST_POSITION + distance, height)
             self.wall_list.append(wall)
             height += TILE_SIZE
-
+        '''
+        hole_y = random.random()*(HOLE_Y)
+        if(random.randint(0, 1)):
+            wall_top       = arcade.Sprite("images/obstaculo/obstaculo.png", TILE_SCALING)
+            wall_top.position = (LAST_POSITION + distance, hole_y + SCREEN_HEIGHT/2 + 4*TILE_SIZE)
+            if (len(self.wall_list) >= 10):
+                self.wall_list.pop(0)
+            self.wall_list.append(wall_top)
+        else:
+            wall_bottom    = arcade.Sprite("images/obstaculo/obstaculo.png", TILE_SCALING)
+            wall_bottom.position = (LAST_POSITION + distance, hole_y - SCREEN_HEIGHT/2 - 4*TILE_SIZE)
+            if (len(self.wall_list) >= 10):
+                self.wall_list.pop(0)
+            self.wall_list.append(wall_bottom)
 
 
 def main():
