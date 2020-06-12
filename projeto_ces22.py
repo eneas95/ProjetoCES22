@@ -1,11 +1,16 @@
 """
 Projeto: Ces-22
 """
-import arcade
+import arcade, random
+
+# Global variables used to create the next obstacle.
+OBSTACLE_DISTANCE        = 640
+LAST_POSITION            = 0
+
 
 # Constants used to scale the window.
 SCREEN_WIDTH  = 1600
-SCREEN_HEIGHT = 1200
+SCREEN_HEIGHT = 1408
 SCREEN_TITLE  = "Platformer"
 
 
@@ -13,17 +18,16 @@ SCREEN_TITLE  = "Platformer"
 CHARACTER_SCALING = 0.5
 TILE_SCALING      = 0.5
 COIN_SCALING      = 0.5
-
+TILE_SIZE         = 64
 # Movement speed of player, in pixels per frame
 PLAYER_MOVEMENT_SPEED   = 10
 SCENARIO_MOVEMENT_SPEED = 10
-GRAVITY                 = 1
-PLAYER_JUMP_SPEED       = 15
+GRAVITY                 = 2
+PLAYER_JUMP_SPEED       = 30
 
 # How many pixels to keep as a minimum margin between the character
 # and the edge of the screen.
 RIGHT_VIEWPORT_MARGIN  = 1536
-RIGHT_END              = 3200
 
 
 class MyGame(arcade.Window):
@@ -81,30 +85,8 @@ class MyGame(arcade.Window):
         self.player_sprite.change_x = SCENARIO_MOVEMENT_SPEED
         self.player_list.append(self.player_sprite)
 
-        # Create the ground
-        # This shows using a loop to place multiple sprites horizontally
-        for x in range(0, 10000, 64):
-            wall          = arcade.Sprite("images/tiles/grassMid.png", TILE_SCALING)
-            ceil          = arcade.Sprite("images/tiles/grassMid.png", TILE_SCALING)
-            ceil.center_x = x
-            ceil.center_y = 1168 
-            wall.center_x = x
-            wall.center_y = 32
-            self.wall_list.append(wall)
-            self.wall_list.append(ceil)
-
-
-        # Put some crates on the ground
-        # This shows using a coordinate list to place sprites
-        coordinate_list = [[512, 96],
-                           [256, 96],
-                           [768, 96]]
-
-        for coordinate in coordinate_list:
-            # Add a crate on the ground
-            wall = arcade.Sprite("images/tiles/boxCrate_double.png", TILE_SCALING)
-            wall.position = coordinate
-            self.wall_list.append(wall)
+        #Initiate last position.
+        LAST_POSITION = self.player_sprite.right
 
         # Create the 'physics engine'
         self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite,
@@ -113,9 +95,17 @@ class MyGame(arcade.Window):
 
     def on_draw(self):
         """ Render the screen. """
+        global OBSTACLE_AHEAD
+        global OBSTACLE_DISTANCE
+        global LAST_POSITION
         # Clear the screen to the background color. It is required to be called
         # before drawing anything to the screen.
         arcade.start_render()
+
+        if (self.player_sprite.right - LAST_POSITION >= OBSTACLE_DISTANCE):
+            LAST_POSITION = self.player_sprite.right
+            self.create_obstacle(5*OBSTACLE_DISTANCE)
+
 
         # Draw our sprites
         self.wall_list.draw()
@@ -150,6 +140,13 @@ class MyGame(arcade.Window):
         # Track if we need to change the viewport
 
         changed = False
+        #Ceil limit.
+        if self.player_sprite.top > SCREEN_HEIGHT:
+            self.player_sprite.top = SCREEN_HEIGHT
+
+        #Floor limit.
+        if self.player_sprite.bottom < 0:
+            self.player_sprite.bottom = 0
 
         # Scroll right
         right_boundary = self.view_left + SCREEN_WIDTH - RIGHT_VIEWPORT_MARGIN
@@ -168,6 +165,22 @@ class MyGame(arcade.Window):
                                 SCREEN_WIDTH + self.view_left,
                                 self.view_bottom,
                                 SCREEN_HEIGHT + self.view_bottom)
+
+
+    def create_obstacle(self, distance):
+        ''' Create the next obstacle with a hole.'''
+        HOLE = random.randint(1, 20)
+        height = TILE_SIZE/2
+        for n in range(0, 22):
+            if (n == HOLE - 1 or n == HOLE or n == HOLE + 1 or n == HOLE + 2):
+                height += TILE_SIZE
+                continue
+            #height        = 3*TILE_SIZE/2 + TILE_SIZE*(n - 1)
+            wall = arcade.Sprite("images/tiles/boxCrate_double.png", TILE_SCALING)
+            wall.position = (LAST_POSITION + distance, height)
+            self.wall_list.append(wall)
+            height += TILE_SIZE
+
 
 
 def main():
