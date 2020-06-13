@@ -3,12 +3,6 @@ Projeto: Ces-22
 """
 import arcade, random
 
-
-# Global variables used to create the next obstacle.
-OBSTACLE_DISTANCE        = 640
-LAST_POSITION            = 0
-LEVEL                    = 0
-
 # Constants used to scale the window.
 SCREEN_WIDTH  = 2000
 SCREEN_HEIGHT = 1500
@@ -23,7 +17,6 @@ TILE_SIZE         = 64
 HOLE_Y            = SCREEN_HEIGHT - 4*TILE_SIZE
 # Movement speed of player, in pixels per frame
 PLAYER_MOVEMENT_SPEED   = 10
-SCENARIO_MOVEMENT_SPEED = 10
 GRAVITY                 = 2
 PLAYER_JUMP_SPEED       = 30
 
@@ -42,7 +35,7 @@ class MyGame(arcade.Window):
         # Call the parent class (arcade.window) and set up the window
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, fullscreen = True)
 
-
+        #General attributes
 
         # These are 'lists' that keep track of our sprites. Each sprite should
         # go into a list.
@@ -50,12 +43,11 @@ class MyGame(arcade.Window):
         self.wall_list   = None
         self.player_list = None
 
-        # Separate variable that holds the player sprite
-        self.player_sprite  = None
-        self.player2_sprite = None
+        # Separate variable that holds the player sprite list
+        self.player_sprite  = []
 
         # Our physics engine
-        self.physics_engine = None
+        self.physics_engine = []
 
         # Used to keep track of our scrolling
         self.view_bottom = 0
@@ -63,12 +55,16 @@ class MyGame(arcade.Window):
 
         arcade.set_background_color(arcade.csscolor.CYAN)
 
-
     def setup(self):
         """
         The method 'setup' outside __init__ makes it easier to restart the game.
         Call this function to restart the game.
         """
+        #Create and initiate the attributes:
+        self.obstacle_distance       = 400
+        self.last_position           = 0
+        self.level                   = 0
+        self.score                   = 0
 
         # Used to keep track of our scrolling
         self.view_bottom = 0
@@ -78,36 +74,34 @@ class MyGame(arcade.Window):
         #OBS:'use_spatial_hash=True' speeds the time it takes to find
         # collisions, but increases the time it takes to move a sprite. Do not
         # use in objects that move.
-        self.player_list = arcade.SpriteList()
+        self.player_list = arcade.SpriteList() #Create the first player sprite
         self.wall_list   = arcade.SpriteList(use_spatial_hash=True)
         self.coin_list   = arcade.SpriteList(use_spatial_hash=True)
 
         # Set up the player, specifically placing it at these coordinates.
-        self.player_sprite          = arcade.Sprite("images/player_1/slimeBlue.png", CHARACTER_SCALING)
-        self.player_sprite.center_x = 64
-        self.player_sprite.center_y = 1500
-        self.player_sprite.change_x = SCENARIO_MOVEMENT_SPEED
-        self.player_list.append(self.player_sprite)
+        self.player_sprite.append(arcade.Sprite("images/player_1/slimeBlue.png", CHARACTER_SCALING))
+        self.player_sprite[0].center_x = 64
+        self.player_sprite[0].last_x      = 64
+        self.player_sprite[0].center_y = SCREEN_HEIGHT
+        self.player_sprite[0].change_x = 5
+        self.player_list.append(self.player_sprite[0])
 
-        #Initiate last position.
-        LAST_POSITION = self.player_sprite.right
+        #Initialize the last position:
+        self.last_position          = self.player_sprite[0].right
         # Create the 'physics engine'
-        self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite,
+        self.physics_engine.append(arcade.PhysicsEnginePlatformer(self.player_sprite[0],
                                                              self.wall_list,
-                                                             GRAVITY)
+                                                             GRAVITY))
 
     def on_draw(self):
         """ Render the screen. """
-        global OBSTACLE_AHEAD
-        global OBSTACLE_DISTANCE
-        global LAST_POSITION
         # Clear the screen to the background color. It is required to be called
         # before drawing anything to the screen.
         arcade.start_render()
 
-        if (self.player_sprite.right - LAST_POSITION >= OBSTACLE_DISTANCE):
-            LAST_POSITION = self.player_sprite.right
-            self.create_obstacle(5*OBSTACLE_DISTANCE)
+        if (self.player_sprite[0].right - self.last_position >= self.obstacle_distance):
+            self.last_position = self.player_sprite[0].right
+            self.create_obstacle()
 
 
         # Draw our sprites
@@ -118,25 +112,30 @@ class MyGame(arcade.Window):
     def on_key_press(self, key, modifiers):
         """Called whenever a key is pressed. """
 
-        if key == arcade.key.F:
-            self.set_fullscreen(not self.fullscreen)
-            self.set_viewport(0, SCREEN_WIDTH, 0, SCREEN_HEIGHT)
+
 
         if key == arcade.key.UP or key == arcade.key.W:
-            self.player_sprite.change_y  = PLAYER_JUMP_SPEED
-        elif key == arcade.key.RIGHT or key == arcade.key.D:
-            self.player_sprite.change_x += PLAYER_MOVEMENT_SPEED
+            for player in self.player_sprite:
+                player.change_y  = PLAYER_JUMP_SPEED
+        elif key == arcade.key.F:
+            self.set_fullscreen(not self.fullscreen)
+            self.set_viewport(0, SCREEN_WIDTH, 0, SCREEN_HEIGHT)
+        elif key == arcade.key.U: ## debugging
+            self.level_up()
 
-    def on_key_release(self, key, modifiers):
-        """Called when the user releases a key. """
-        if key == arcade.key.RIGHT or key == arcade.key.D:
-            self.player_sprite.change_x = SCENARIO_MOVEMENT_SPEED
 
     def update(self, delta_time):
         """ Movement and game logic """
 
-        # Call update on all sprites
-        self.physics_engine.update()
+        #Update engines:
+        for engine in self.physics_engine:
+            engine.update()
+
+        self.check_for_horizontal_collision()
+
+        #Game Over!
+        if (len(self.player_list)==0):
+            self.game_over()
 
         # --- Manage Scrolling ---
 
@@ -144,17 +143,20 @@ class MyGame(arcade.Window):
 
         changed = False
         #Ceil limit.
-        if self.player_sprite.top > SCREEN_HEIGHT:
-            self.player_sprite.top = SCREEN_HEIGHT
+        for player in self.player_sprite:
+            if player.top > SCREEN_HEIGHT:
+                player.top = SCREEN_HEIGHT
 
         #Floor limit.
-        if self.player_sprite.bottom < 0:
-            self.player_sprite.bottom = 0
+        for player in self.player_sprite:
+            if player.bottom < 0:
+                player.bottom = 0
+
 
         # Scroll right
         right_boundary = self.view_left + SCREEN_WIDTH - RIGHT_VIEWPORT_MARGIN
-        if self.player_sprite.right > right_boundary:
-            self.view_left += self.player_sprite.right - right_boundary
+        if self.player_sprite[-1].right > right_boundary:
+            self.view_left += self.player_sprite[-1].right - right_boundary
             changed = True
 
         if changed:
@@ -170,35 +172,59 @@ class MyGame(arcade.Window):
                                 SCREEN_HEIGHT + self.view_bottom)
 
 
-    def create_obstacle(self, distance):
+    def create_obstacle(self):
         ''' Create the next obstacle with a hole.'''
-        '''
-        HOLE = random.randint(1, 20)
-        height = TILE_SIZE/2
-        for n in range(0, 22):
-            if (n == HOLE - 1 or n == HOLE or n == HOLE + 1 or n == HOLE + 2):
-                height += TILE_SIZE
-                continue
-            #height        = 3*TILE_SIZE/2 + TILE_SIZE*(n - 1)
-            wall = arcade.Sprite("images/tiles/boxCrate_double.png", TILE_SCALING)
-            wall.position = (LAST_POSITION + distance, height)
-            self.wall_list.append(wall)
-            height += TILE_SIZE
-        '''
         hole_y = random.random()*(HOLE_Y)
         if(random.randint(0, 1)):
             wall_top       = arcade.Sprite("images/obstaculo/obstaculo.png", TILE_SCALING)
-            wall_top.position = (LAST_POSITION + distance, hole_y + SCREEN_HEIGHT/2 + 4*TILE_SIZE)
-            if (len(self.wall_list) >= 10):
+            wall_top.position = (self.last_position + 5*self.obstacle_distance, hole_y + SCREEN_HEIGHT/2 + 4*TILE_SIZE)
+            if (len(self.wall_list) >= 6):
                 self.wall_list.pop(0)
             self.wall_list.append(wall_top)
         else:
             wall_bottom    = arcade.Sprite("images/obstaculo/obstaculo.png", TILE_SCALING)
-            wall_bottom.position = (LAST_POSITION + distance, hole_y - SCREEN_HEIGHT/2 - 4*TILE_SIZE)
-            if (len(self.wall_list) >= 10):
+            wall_bottom.position = (self.last_position + 5*self.obstacle_distance, hole_y - SCREEN_HEIGHT/2)
+            if (len(self.wall_list) >= 6):
                 self.wall_list.pop(0)
             self.wall_list.append(wall_bottom)
 
+    def level_up(self):
+        self.level                   += 1
+        initial_speed = self.player_sprite[0].change_x
+        self.obstacle_distance       *= 1.05
+        self.life                     = 100
+        self.player_sprite.append(arcade.Sprite("images/player_1/slimeBlue.png", CHARACTER_SCALING))
+        self.player_sprite[-1].center_x = self.player_sprite[0].right + random.randint(-1, 1)
+        self.player_sprite[-1].last_x = self.player_sprite[-1].center_x
+        self.player_sprite[-1].center_y = self.player_sprite[0].bottom + random.randint(-1, 1)
+        self.player_list.append(self.player_sprite[-1])
+        for player in self.player_sprite:
+            player.change_x  = initial_speed*1.1
+        self.physics_engine.append(arcade.PhysicsEnginePlatformer(self.player_sprite[-1],
+                                                                self.wall_list,
+                                                                GRAVITY))
+
+    def check_for_horizontal_collision(self):
+        ''' Check for horizontal collisions '''
+        player_destroy_list = []
+        engine_destroy_list = []
+        for i in range(len(self.player_sprite)):
+            if (self.player_sprite[i].center_x - self.player_sprite[i].last_x <= 0.0001):
+                player_destroy_list.append(self.player_sprite[i])
+                engine_destroy_list.append(self.physics_engine[i])
+
+        for player in player_destroy_list:
+            self.player_sprite.remove(player)
+            self.player_list.remove(player)
+
+        for engine in engine_destroy_list:
+            self.physics_engine.remove(engine)
+
+        for player in self.player_sprite:
+            player.last_x = player.center_x
+
+    def game_over(self):
+        self.setup()
 
 def main():
     """ Main method """
