@@ -14,6 +14,7 @@ CHARACTER_SCALING = 1
 TILE_SCALING      = 1
 COIN_SCALING      = 0.5
 TILE_SIZE         = 64
+COIN_SCALING      = 1
 HOLE_Y            = SCREEN_HEIGHT - 4*TILE_SIZE
 # Movement speed of player, in pixels per frame
 PLAYER_MOVEMENT_SPEED   = 5

@@ -97,6 +97,11 @@ class MyGame(arcade.View):
         self.view_bottom = 0
         self.view_left   = 0
 
+        # Load sounds
+        self.collect_coin_sound = arcade.load_sound("sounds/coin1.wav")
+        self.jump_sound         = arcade.load_sound("sounds/jump1.wav")
+        self.lose_sound         = arcade.load_sound("sounds/lose1.wav")
+
         # Don't show the mouse cursor
         self.window.set_mouse_visible(False)
 
@@ -129,9 +134,10 @@ class MyGame(arcade.View):
         # before drawing anything to the screen.
         arcade.start_render()
 
+        #create new coins and obstacles
         if (self.player_sprite[0].right - self.last_position >= self.obstacle_distance):
             self.last_position = self.player_sprite[0].right
-            self.create_obstacle()
+            self.create_obstacles_and_coins()
 
 
         # Draw our score on the screen, scrolling it with the viewport:
@@ -143,8 +149,9 @@ class MyGame(arcade.View):
         if (delta_t*self.speed + self.distance - self.total_distance >= 100):
             self.total_distance += 100
             self.increase_score(10)
+        #Print the information on the screen
         score_text       = "Pontuação total: {0:<5} (Parcial: {1:<5})".format(self.total_score, self.score)
-        speed_text       = "Velocidade: {:<5.2f} m/s".format(self.speed)
+        speed_text       = "Velocidade: {:<5.0f} m/s".format(self.speed)
         total_distance   = "Distância total: {:<5.0f} m".format(self.total_distance)
         arcade.draw_text(score_text, 10 + self.view_left, SCREEN_HEIGHT - 40,
                          arcade.csscolor.BLACK, 30)
@@ -152,6 +159,11 @@ class MyGame(arcade.View):
                          arcade.csscolor.BLACK, 30)
         arcade.draw_text(total_distance, 10 + self.view_left, SCREEN_HEIGHT - 100,
                          arcade.csscolor.BLACK, 30)
+
+        #Check for level_up:
+        while(self.score >= 100):
+            self.level_up()
+            self.score -= 100
 
         # Draw our sprites
         self.wall_list.draw()
@@ -163,15 +175,17 @@ class MyGame(arcade.View):
         if key == arcade.key.UP or key == arcade.key.W:
             for player in self.player_sprite:
                 player.change_y  = PLAYER_JUMP_SPEED + 20*random.random() - 5
+            arcade.play_sound(self.jump_sound)
         elif key == arcade.key.F:
             self.window.set_fullscreen(not self.window.fullscreen)
             self.window.set_viewport(0, SCREEN_WIDTH, 0, SCREEN_HEIGHT)
         elif key == arcade.key.P:
             pause_view = PauseView(self)
             self.window.show_view(pause_view)
+        '''
         elif key == arcade.key.U: ## debugging
             self.increase_score(10)
-
+        '''
 
     def update(self, delta_time):
         """ Movement and game logic """
@@ -179,6 +193,20 @@ class MyGame(arcade.View):
         #Update engines:
         for engine in self.physics_engine:
             engine.update()
+
+        # Compute collisions with coins
+        coin_hit_list = []
+        for player in self.player_list:
+            coin_hit_list.extend(arcade.check_for_collision_with_list(player,
+                                                                 self.coin_list))
+
+        # Loop through each coin we hit (if any) and remove it
+        for coin in coin_hit_list:
+            # Remove the coin
+            coin.remove_from_sprite_lists()
+            # Increase scrore and play sound
+            self.increase_score(int(random.random()*30))
+            arcade.play_sound(self.collect_coin_sound)
 
         self.check_for_horizontal_collision()
 
@@ -223,43 +251,58 @@ class MyGame(arcade.View):
                                 SCREEN_HEIGHT + self.view_bottom)
 
 
-    def create_obstacle(self):
-        ''' Create the next obstacle with a hole.'''
+    def create_obstacles_and_coins(self):
+        ''' Create the next obstacle with a hole and create coins.'''
         hole_y = random.random()*(HOLE_Y)
         if(random.randint(0, 1)):
-            wall_top       = arcade.Sprite("images/obstaculo/obstaculo.png", TILE_SCALING)
+            wall_top          = arcade.Sprite("images/obstaculo/obstaculo.png", TILE_SCALING)
             wall_top.position = (self.last_position + 5*self.obstacle_distance, hole_y + SCREEN_HEIGHT/2 + 3*TILE_SIZE)
             if (len(self.wall_list) >= 6):
                 self.wall_list.pop(0)
             self.wall_list.append(wall_top)
         else:
-            wall_bottom    = arcade.Sprite("images/obstaculo/obstaculo.png", TILE_SCALING)
+            wall_bottom          = arcade.Sprite("images/obstaculo/obstaculo.png", TILE_SCALING)
             wall_bottom.position = (self.last_position + 5*self.obstacle_distance, hole_y - SCREEN_HEIGHT/2 + 3*TILE_SIZE)
             if (len(self.wall_list) >= 6):
                 self.wall_list.pop(0)
             self.wall_list.append(wall_bottom)
+        for i in range(random.randint(1, 10)):
+            coin = arcade.Sprite("images/items/coinGold.png", COIN_SCALING)
+            coin.position = (self.player_list[0].center_x + SCREEN_WIDTH + random.random()*(SCREEN_WIDTH), random.random()*SCREEN_HEIGHT)
+            self.coin_list.append(coin)
+
+
 
     def level_up(self):
         self.level                   += 1
         initial_speed = self.player_sprite[0].change_x
-        self.obstacle_distance       *= 1.3
+        self.obstacle_distance       *= 1.05
         self.player_sprite.append(arcade.Sprite("images/player_1/slimeBlue.png", CHARACTER_SCALING))
-        self.player_sprite[-1].center_x = self.player_sprite[0].right + (5*random.random() -2.5)
+        self.player_sprite[-1].center_x = self.player_sprite[0].right + (30*random.random() -2.5)
         self.player_sprite[-1].last_x = self.player_sprite[-1].center_x
         self.player_sprite[-1].center_y = self.player_sprite[0].bottom + (5*random.random() -2.5)
         self.player_list.append(self.player_sprite[-1])
         for player in self.player_sprite:
-            player.change_x  = initial_speed*1.2
+            player.change_x  = initial_speed*1.1
         self.physics_engine.append(arcade.PhysicsEnginePlatformer(self.player_sprite[-1],
                                                                 self.wall_list,
                                                                 GRAVITY))
+
+
+    #def check_for_horizontal_collision(self):
+    #    ''' Check for horizontal collisions from player clones and walls'''
+    #    for player in self.player_list:
+    #        if (player.center_x - player.last_x <= 0.001):
+    #            player.remove_from_sprite_lists()
+    #    for player in self.player_list:
+    #        player.last_x = player.center_x
 
     def check_for_horizontal_collision(self):
         ''' Check for horizontal collisions '''
         player_destroy_list = []
         engine_destroy_list = []
         for i in range(len(self.player_sprite)):
-            if (self.player_sprite[i].center_x - self.player_sprite[i].last_x <= 0.0001):
+            if (self.player_sprite[i].center_x - self.player_sprite[i].last_x <= 0.001):
                 player_destroy_list.append(self.player_sprite[i])
                 engine_destroy_list.append(self.physics_engine[i])
 
@@ -275,14 +318,13 @@ class MyGame(arcade.View):
 
     def game_over(self):
         game_over = GameOver(self.total_score)
+        arcade.play_sound(self.lose_sound)
         self.window.show_view(game_over)
 
     def increase_score(self, amount):
         self.score       += amount
         self.total_score += amount
-        if (self.score >= 100): #
-            self.level_up()
-            self.score = 0
+
 
 
 class GameOver(arcade.View):
