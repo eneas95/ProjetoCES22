@@ -14,7 +14,7 @@ class InitialView(arcade.View):
     def on_draw(self):
         arcade.start_render()
         self.window.set_viewport(0, SCREEN_WIDTH, 0, SCREEN_HEIGHT)
-        arcade.draw_text("Tela inicial", SCREEN_WIDTH/2, SCREEN_HEIGHT/2+50,
+        arcade.draw_text("FLIER FLUBBER", SCREEN_WIDTH/2, SCREEN_HEIGHT/2+50,
                          arcade.color.BLACK, font_size=50, anchor_x="center")
 
         # Show tip to return or reset
