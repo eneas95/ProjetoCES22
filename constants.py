@@ -16,9 +16,9 @@ COIN_SCALING      = 0.5
 TILE_SIZE         = 64
 HOLE_Y            = SCREEN_HEIGHT - 4*TILE_SIZE
 # Movement speed of player, in pixels per frame
-PLAYER_MOVEMENT_SPEED   = 10
+PLAYER_MOVEMENT_SPEED   = 5
 GRAVITY                 = 2
-PLAYER_JUMP_SPEED       = 30
+PLAYER_JUMP_SPEED       = 35
 
 # How many pixels to keep as a minimum margin between the character
 # and the edge of the screen.
